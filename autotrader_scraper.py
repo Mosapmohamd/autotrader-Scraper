@@ -91,55 +91,51 @@ COOKIES = {
 # =============================
 @app.get("/scrape/autotrader")
 def scrape_autotrader():
-    init_db()
+    try:
+        init_db()
 
-    response = requests.get(
-        URL,
-        params=PARAMS,
-        headers=HEADERS,
-        cookies=COOKIES,
-        verify=False,
-        timeout=30
-    )
-
-    if response.status_code != 200:
-        raise HTTPException(status_code=500, detail="Request failed")
-
-    match = re.search(
-        r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
-        response.text,
-        re.DOTALL
-    )
-
-    if not match:
-        raise HTTPException(status_code=500, detail="Embedded JSON not found")
-
-    data = json.loads(match.group(1).replace("&quot;", '"'))
-    page_props = data["props"]["pageProps"]
-
-    store_count("AutoTrader", page_props["numberOfResults"])
-
-    cars = page_props["listings"]
-    saved = 0
-
-    for car in cars:
-        v = car.get("vehicle", {})
-        p = car.get("price", {})
-        l = car.get("location", {})
-
-        title = f"{v.get('modelYear','')} {v.get('make','')} {v.get('model','')}"
-        insert_car(
-            title=title,
-            price=p.get("priceFormatted"),
-            city=l.get("city"),
-            mileage=v.get("mileageInKm"),
-            image=car.get("images",[None])[0],
-            url=car.get("url")
+        response = requests.get(
+            URL,
+            params=PARAMS,
+            headers=HEADERS,
+            cookies=COOKIES,
+            timeout=30
         )
-        saved += 1
 
-    return {
-        "status": "success",
-        "cars_saved": saved,
-        "total_results": page_props["numberOfResults"]
-    }
+        response.raise_for_status()
+
+        match = re.search(
+            r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+            response.text,
+            re.DOTALL
+        )
+
+        if not match:
+            return {"error": "JSON script not found"}
+
+        data = json.loads(match.group(1).replace("&quot;", '"'))
+        page_props = data["props"]["pageProps"]
+
+        cars = page_props["listings"]
+
+        for car in cars:
+            v = car.get("vehicle", {})
+            p = car.get("price", {})
+            l = car.get("location", {})
+
+            title = f"{v.get('modelYear','')} {v.get('make','')} {v.get('model','')}"
+
+            insert_car(
+                title,
+                p.get("priceFormatted"),
+                l.get("city"),
+                v.get("mileageInKm"),
+                car.get("images",[None])[0],
+                car.get("url")
+            )
+
+        return {"status": "ok", "count": len(cars)}
+
+    except Exception as e:
+        return {"error": str(e)}
+
