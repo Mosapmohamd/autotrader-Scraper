@@ -125,17 +125,21 @@ def scrape_autotrader():
 
             title = f"{v.get('modelYear','')} {v.get('make','')} {v.get('model','')}"
 
-            insert_car(
-                title,
-                p.get("priceFormatted"),
-                l.get("city"),
-                v.get("mileageInKm"),
-                car.get("images",[None])[0],
-                car.get("url")
-            )
+        images = car.get("images") or []
+        image = images[0] if images else None
+        
+        insert_car(
+            title,
+            p.get("priceFormatted"),
+            l.get("city"),
+            v.get("mileageInKm"),
+            image,
+            car.get("url")
+        )
 
         return {"status": "ok", "count": len(cars)}
 
     except Exception as e:
         return {"error": str(e)}
+
 
