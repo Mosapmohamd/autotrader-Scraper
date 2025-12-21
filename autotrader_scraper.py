@@ -89,7 +89,7 @@ COOKIES = {
 # =============================
 # API ENDPOINT
 # =============================
-@app.get("/scrape/autotrader")
+@app.get("/scrape_autotrader")
 def scrape_autotrader():
     try:
         init_db()
@@ -141,5 +141,6 @@ def scrape_autotrader():
 
     except Exception as e:
         return {"error": str(e)}
+
 
 
