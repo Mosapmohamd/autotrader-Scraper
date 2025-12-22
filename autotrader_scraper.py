@@ -14,7 +14,7 @@ PARAMS = {
     "offer": "U",
     "size": "40",
     "sort": "age",
-    "zip": "Spanish, ON",
+    "zip": "London, ON",
     "zipr": "1000"
 }
 
@@ -70,4 +70,5 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
 
