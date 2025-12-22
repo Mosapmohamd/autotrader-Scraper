@@ -5,16 +5,20 @@ import re
 
 app = FastAPI(title="Autotrader Scraping API")
 
-URL = "https://www.autotrader.ca/cars"
+URL = "https://www.autotrader.ca/lst"
 
 PARAMS = {
     "atype": "C",
     "custtype": "P",
     "cy": "CA",
-    "offer": "U",
+    "damaged_listing"="exclude",
+    "desc"=1,
+    "lat"="42.98014450073242",
+    "lon"="-81.23054504394531",
+    "offer": "N",
     "size": "40",
     "sort": "age",
-    "zip": "London, ON",
+    "zip": "N6B3B4 London, ON",
     "zipr": "1000"
 }
 
@@ -70,5 +74,6 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
 
 
