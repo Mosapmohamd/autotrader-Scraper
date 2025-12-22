@@ -1,7 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 import requests
-import json
-import re
 
 app = FastAPI(title="Autotrader Scraping API")
 
@@ -11,9 +9,9 @@ PARAMS = {
     "atype": "C",
     "custtype": "P",
     "cy": "CA",
-    "desc":1,
-    "lat":"42.98014450073242",
-    "lon":"-81.23054504394531",
+    "desc": 1,
+    "lat": "42.98014450073242",
+    "lon": "-81.23054504394531",
     "offer": "N",
     "size": "40",
     "sort": "age",
@@ -24,6 +22,10 @@ PARAMS = {
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
+
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
 
 @app.get("/scrape_autotrader")
 def scrape_autotrader():
