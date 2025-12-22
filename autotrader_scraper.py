@@ -22,7 +22,7 @@ PARAMS = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     "Accept": "application/json",
     "Referer": "https://www.autotrader.ca/"
 }
@@ -75,6 +75,7 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
 
 
 
