@@ -11,10 +11,9 @@ PARAMS = {
     "atype": "C",
     "custtype": "P",
     "cy": "CA",
-    "damaged_listing"="exclude",
-    "desc"=1,
-    "lat"="42.98014450073242",
-    "lon"="-81.23054504394531",
+    "desc":1,
+    "lat":"42.98014450073242",
+    "lon":"-81.23054504394531",
     "offer": "N",
     "size": "40",
     "sort": "age",
@@ -74,6 +73,7 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
 
 
 
