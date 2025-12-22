@@ -1,69 +1,67 @@
 from fastapi import FastAPI, HTTPException
 import requests
+import json
+import re
 
 app = FastAPI(title="Autotrader Scraping API")
 
-URL = "https://www.autotrader.ca/rest/searchresults"
+URL = "https://www.autotrader.ca/cars"
 
-PAYLOAD = {
+PARAMS = {
     "atype": "C",
     "custtype": "P",
     "cy": "CA",
-    "damaged_listing": "exclude",
-    "desc": 1,
-    "lat": 42.98014450073242,
-    "lon": -81.23054504394531,
-    "offer": ["N", "U"],
-    "search_id": "1tr3yb0krmj",
-    "size": 20,
+    "offer": "U",
+    "size": "40",
     "sort": "age",
-    "ustate": ["N", "U"],
-    "zip": "N6B3B4 London, ON",
-    "zipr": 1000
+    "zip": "N6B 3B4",
+    "zipr": "1000"
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    "X-Requested-With": "XMLHttpRequest",
-    "Referer": "https://www.autotrader.ca/"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
 @app.get("/scrape_autotrader")
 def scrape_autotrader():
-    r = requests.post(
+
+    r = requests.get(
         URL,
-        json=PAYLOAD,
+        params=PARAMS,
         headers=HEADERS,
         timeout=30
     )
 
     if r.status_code != 200:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Autotrader request failed: {r.status_code}"
-        )
+        raise HTTPException(500, "Request failed")
 
-    data = r.json()
-    listings = data.get("listings", [])
+    match = re.search(
+        r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+        r.text,
+        re.DOTALL
+    )
+
+    if not match:
+        raise HTTPException(500, "JSON not found")
+
+    data = json.loads(match.group(1).replace("&quot;", '"'))
+    listings = data["props"]["pageProps"]["listings"]
+
     results = []
 
     for car in listings:
-        vehicle = car.get("vehicle", {})
-        price = car.get("price", {})
-        location = car.get("location", {})
+        v = car.get("vehicle", {})
+        p = car.get("price", {})
+        l = car.get("location", {})
 
         images = car.get("images") or []
         image = images[0] if images else None
 
         results.append({
-            "title": f"{vehicle.get('modelYear', '')} "
-                     f"{vehicle.get('make', '')} "
-                     f"{vehicle.get('model', '')}",
-            "price": price.get("priceFormatted"),
-            "mileage_km": vehicle.get("mileageInKm"),
-            "city": location.get("city"),
+            "title": f"{v.get('modelYear','')} {v.get('make','')} {v.get('model','')}",
+            "price": p.get("priceFormatted"),
+            "mileage_km": v.get("mileageInKm"),
+            "city": l.get("city"),
             "image": image,
             "url": car.get("url")
         })
