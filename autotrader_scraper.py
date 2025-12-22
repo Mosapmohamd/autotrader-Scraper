@@ -1,7 +1,5 @@
 from fastapi import FastAPI, HTTPException
 import requests
-import json
-import re
 
 app = FastAPI(title="Autotrader Scraping API")
 
@@ -11,14 +9,17 @@ PARAMS = {
     "atype": "C",
     "custtype": "P",
     "cy": "CA",
-    "desc":1,
+    "damaged_listing": "exclude",
+    "desc": 1,
     "lat": 42.98014450073242,
     "lon": -81.23054504394531,
     "offer": "N,U",
-    "size": "20",
+    "search_id": "1tr3yb0krmj",
+    "size": 20,
     "sort": "age",
-    "zip": "N6B3B4",
-    "zipr": "1000"
+    "ustate": "N,U",
+    "zip": "N6B3B4 London, ON",
+    "zipr": 1000
 }
 
 HEADERS = {
@@ -29,7 +30,6 @@ HEADERS = {
 
 @app.get("/scrape_autotrader")
 def scrape_autotrader():
-
     r = requests.get(
         URL,
         params=PARAMS,
@@ -38,35 +38,34 @@ def scrape_autotrader():
     )
 
     if r.status_code != 200:
-        raise HTTPException(500, "Request failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Autotrader request failed: {r.status_code}"
+        )
 
-    match = re.search(
-        r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
-        r.text,
-        re.DOTALL
-    )
+    try:
+        data = r.json()
+    except Exception:
+        raise HTTPException(500, "Invalid JSON response")
 
-    if not match:
-        raise HTTPException(500, "JSON not found")
-
-    data = json.loads(match.group(1).replace("&quot;", '"'))
-    listings = data["props"]["pageProps"]["listings"]
-
+    listings = data.get("listings", [])
     results = []
 
     for car in listings:
-        v = car.get("vehicle", {})
-        p = car.get("price", {})
-        l = car.get("location", {})
+        vehicle = car.get("vehicle", {})
+        price = car.get("price", {})
+        location = car.get("location", {})
 
         images = car.get("images") or []
         image = images[0] if images else None
 
         results.append({
-            "title": f"{v.get('modelYear','')} {v.get('make','')} {v.get('model','')}",
-            "price": p.get("priceFormatted"),
-            "mileage_km": v.get("mileageInKm"),
-            "city": l.get("city"),
+            "title": f"{vehicle.get('modelYear', '')} "
+                     f"{vehicle.get('make', '')} "
+                     f"{vehicle.get('model', '')}",
+            "price": price.get("priceFormatted"),
+            "mileage_km": vehicle.get("mileageInKm"),
+            "city": location.get("city"),
             "image": image,
             "url": car.get("url")
         })
@@ -75,9 +74,3 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
-
-
-
-
-
-
