@@ -5,7 +5,7 @@ import re
 
 app = FastAPI(title="Autotrader Scraping API")
 
-URL = "https://www.autotrader.ca/lst"
+URL = "https://www.autotrader.ca/cars"
 
 PARAMS = {
     "atype": "C",
@@ -70,3 +70,4 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
