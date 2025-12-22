@@ -36,16 +36,17 @@ def scrape_autotrader():
         raise HTTPException(500, "Request failed")
 
     match = re.search(
-        r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+        r'<script[^>]+id="__NEXT_DATA__"[^>]*>(.*?)</script>',
         r.text,
         re.DOTALL
     )
-
+    
     if not match:
         raise HTTPException(500, "JSON not found")
-
-    data = json.loads(match.group(1).replace("&quot;", '"'))
+    
+    data = json.loads(match.group(1))
     listings = data["props"]["pageProps"]["listings"]
+
 
     results = []
 
@@ -70,3 +71,4 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
+
