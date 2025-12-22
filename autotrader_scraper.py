@@ -14,7 +14,7 @@ PARAMS = {
     "offer": "U",
     "size": "40",
     "sort": "age",
-    "zip": "N6B 3B4",
+    "zip": "Spanish, ON",
     "zipr": "1000"
 }
 
@@ -36,17 +36,16 @@ def scrape_autotrader():
         raise HTTPException(500, "Request failed")
 
     match = re.search(
-        r'<script[^>]+id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+        r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
         r.text,
         re.DOTALL
     )
-    
+
     if not match:
         raise HTTPException(500, "JSON not found")
-    
-    data = json.loads(match.group(1))
-    listings = data["props"]["pageProps"]["listings"]
 
+    data = json.loads(match.group(1).replace("&quot;", '"'))
+    listings = data["props"]["pageProps"]["listings"]
 
     results = []
 
@@ -71,4 +70,3 @@ def scrape_autotrader():
         "count": len(results),
         "cars": results
     }
-
