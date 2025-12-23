@@ -1,12 +1,15 @@
 from fastapi import FastAPI, HTTPException
 import requests
+import warnings
 
-app = FastAPI(title="Autotrader API Scraper")
+warnings.filterwarnings("ignore")
+
+app = FastAPI(title="Autotrader Scraping API")
 
 # =============================
-# CONFIG
+# CONFIGURATION
 # =============================
-AUTOTRADER_API = "https://www.autotrader.ca/api/search"
+URL = "https://www.autotrader.ca/api/search"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -23,19 +26,21 @@ BASE_PARAMS = {
 }
 
 # =============================
-# ENDPOINTS
+# ROOT
 # =============================
 @app.get("/")
-def root():
+def read_root():
     return {
-        "service": "Autotrader Scraper",
-        "endpoints": [
-            "/scrape_autotrader",
-            "/health"
-        ]
+        "message": "Autotrader Scraping API",
+        "endpoints": {
+            "/scrape_autotrader": "GET - Scrape Autotrader listings",
+            "/health": "GET - Health check"
+        }
     }
 
-
+# =============================
+# SCRAPER
+# =============================
 @app.get("/scrape_autotrader")
 def scrape_autotrader(
     postal_code: str = "N5X0E2",
@@ -49,7 +54,7 @@ def scrape_autotrader(
         })
 
         response = requests.get(
-            AUTOTRADER_API,
+            URL,
             headers=HEADERS,
             params=params,
             timeout=30
@@ -63,6 +68,7 @@ def scrape_autotrader(
 
         data = response.json()
         listings = data.get("listings", [])
+        total_results = data.get("totalResults")
 
         cars = []
 
@@ -72,27 +78,32 @@ def scrape_autotrader(
                 "price": car.get("price"),
                 "city": car.get("location"),
                 "mileage_km": car.get("mileage"),
-                "url": "https://www.autotrader.ca" + car.get("url", ""),
                 "image": car.get("imageUrl"),
-                "year": car.get("year"),
+                "url": "https://www.autotrader.ca" + car.get("url", ""),
+                "description": car.get("description"),
                 "make": car.get("make"),
-                "model": car.get("model")
+                "model": car.get("model"),
+                "year": car.get("year")
             })
 
         return {
             "success": True,
-            "page": page,
-            "count": len(cars),
+            "total_results": total_results,
+            "scraped_count": len(cars),
+            "source": "AutoTrader",
             "cars": cars
         }
 
     except requests.exceptions.Timeout:
         raise HTTPException(status_code=504, detail="Request timeout")
-
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-
+# =============================
+# HEALTH CHECK
+# =============================
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health_check():
+    return {"status": "healthy", "service": "autotrader_scraper"}
