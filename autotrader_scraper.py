@@ -3,6 +3,8 @@ import requests
 import json
 import re
 import warnings
+from playwright.sync_api import sync_playwright
+
 
 warnings.filterwarnings("ignore")
 
@@ -38,7 +40,7 @@ HEADERS = {
     'Accept-Language': 'en-US,en;q=0.9',
     'Upgrade-Insecure-Requests': '1',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,/;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Sec-Fetch-Site': 'same-origin',
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-User': '?1',
@@ -69,7 +71,7 @@ COOKIES = {
     '_gtmeec': 'e30%3D',
     '_fbp': 'fb.1.1762771930982.1774960817',
     'nlbi_820541_3156894': 'cK7GZnlkmFBu4USEpRL4bAAAAABXW0bE1BNblaqCh8sJN0Ca',
-    '__T2CID__': 'eb28b989-4140-452d-ac76-75c851c5f553',
+    '_T2CID_': 'eb28b989-4140-452d-ac76-75c851c5f553',
     '_clck': 'v16eb9%5E2%5Eg0w%5E0%5E2140',
     '_cc_id': '853619dbd287e54c74355720e04e8ef7',
     'panoramaId': '1506e8abdd2ecdef53769d165cfea9fb927aad097ec22e82e8edcadb259f59ca',
@@ -94,6 +96,51 @@ COOKIES = {
     '_clsk': '1husmi%5E1762772107776%5E3%5E0%5Eo.clarity.ms%2Fcollect',
     'panoramaId_expiry': '1762858506944',
 }
+from playwright.sync_api import sync_playwright
+from urllib.parse import urlencode
+
+def playwright_get(
+    url: str,
+    params: dict | None = None,
+    headers: dict | None = None,
+    cookies: dict | None = None,
+    timeout: int = 30000
+) -> str:
+    # Build URL with params (like requests)
+    if params:
+        url = f"{url}?{urlencode(params, doseq=True)}"
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+
+        context = browser.new_context(
+            extra_http_headers=headers or {}
+        )
+
+        # Convert requests-style cookies to Playwright format
+        if cookies:
+            context.add_cookies([
+                {
+                    "name": k,
+                    "value": v,
+                    "domain": url.split("//")[1].split("/")[0],
+                    "path": "/"
+                }
+                for k, v in cookies.items()
+            ])
+
+        page = context.new_page()
+        page.goto(url, wait_until="networkidle", timeout=timeout)
+
+        html = page.content()
+
+        context.close()
+        browser.close()
+
+        return html
 
 # =============================
 # FASTAPI ENDPOINTS
@@ -115,26 +162,32 @@ def scrape_autotrader():
     """
     try:
         # Make request
-        response = requests.get(
+        # response = requests.get(
+        #     URL,
+        #     params=PARAMS,
+        #     headers=HEADERS,
+        #     cookies=COOKIES,
+        #     verify=False,
+        #     timeout=30
+        # )
+        html = playwright_get(
             URL,
             params=PARAMS,
             headers=HEADERS,
             cookies=COOKIES,
-            verify=False,
-            timeout=30
+            timeout=30000
         )
+        # if response.status_code != 200:
+        #     raise HTTPException(
+        #         status_code=500,
+        #         detail=f"Request failed with status code: {response.status_code}"
+        #     )
 
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Request failed with status code: {response.status_code}"
-            )
-
-        html = response.text
-
+        # html = response.text
+        print(html[:500])
         # Parse embedded JSON
         match = re.search(
-            r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+            r'<script[^>]+type="application/json"[^>]>(.?)</script>',
             html,
             re.DOTALL
         )
@@ -232,7 +285,7 @@ def scrape_autotrader_raw():
         # Try to extract JSON
         html = response.text
         match = re.search(
-            r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+            r'<script[^>]+type="application/json"[^>]>(.?)</script>',
             html,
             re.DOTALL
         )
